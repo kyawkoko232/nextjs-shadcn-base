@@ -12,11 +12,23 @@ import { admin, member, owner } from "./auth/permissions";
 
 const resend = new Resend(process.env.RESEND_API_KEY as string);
 
+// Validate email configuration
+const emailSenderName = process.env.EMAIL_SENDER_NAME || "Your App";
+const emailSenderAddress = process.env.EMAIL_SENDER_ADDRESS;
+
+if (!emailSenderAddress) {
+  throw new Error("EMAIL_SENDER_ADDRESS environment variable is required");
+}
+
+if (!emailSenderAddress.includes("@")) {
+  throw new Error("EMAIL_SENDER_ADDRESS must be a valid email address (e.g., noreply@yourdomain.com)");
+}
+
 export const auth = betterAuth({
   emailVerification: {
     sendVerificationEmail: async ({ user, url }) => {
       resend.emails.send({
-        from: `${process.env.EMAIL_SENDER_NAME} <${process.env.EMAIL_SENDER_ADDRESS}>`,
+        from: `${emailSenderName} <${emailSenderAddress}>`,
         to: user.email,
         subject: "Verify your email",
         react: VerifyEmail({ username: user.name, verifyUrl: url }),
@@ -34,7 +46,7 @@ export const auth = betterAuth({
     enabled: true,
     sendResetPassword: async ({ user, url }) => {
       resend.emails.send({
-        from: `${process.env.EMAIL_SENDER_NAME} <${process.env.EMAIL_SENDER_ADDRESS}>`,
+        from: `${emailSenderName} <${emailSenderAddress}>`,
         to: user.email,
         subject: "Reset your password",
         react: ForgotPasswordEmail({
@@ -69,7 +81,7 @@ export const auth = betterAuth({
       async sendInvitationEmail(data) {
         const inviteLink = `${process.env.NEXT_PUBLIC_APP_URL}/api/accept-invitation/${data.id}`;
         resend.emails.send({
-          from: `${process.env.EMAIL_SENDER_NAME} <${process.env.EMAIL_SENDER_ADDRESS}>`,
+          from: `${emailSenderName} <${emailSenderAddress}>`,
           to: data.email,
           subject: "You've been invited to join our organization",
           react: OrganizationInvitationEmail({
