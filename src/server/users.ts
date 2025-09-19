@@ -76,22 +76,11 @@ export const signUp = async (
   }
 };
 
-export const getUsers = async (organizationId: string) => {
+export const getAllUsers = async () => {
   try {
-    const members = await db.member.findMany({
-      where: {
-        organizationId: organizationId,
-      },
-      select: {
-        userId: true,
-      },
-    });
-
     const users = await db.user.findMany({
-      where: {
-        id: {
-          notIn: members.map((member) => member.userId),
-        },
+      orderBy: {
+        createdAt: 'desc',
       },
     });
 

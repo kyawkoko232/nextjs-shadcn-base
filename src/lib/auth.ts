@@ -1,14 +1,11 @@
 import { prisma } from "@/db";
-import OrganizationInvitationEmail from "@/components/emails/organization-invitation";
 import ForgotPasswordEmail from "@/components/emails/reset-password";
 import VerifyEmail from "@/components/emails/verify-email";
-import { getActiveOrganization } from "@/server/organizations";
 import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import { nextCookies } from "better-auth/next-js";
-import { lastLoginMethod, organization } from "better-auth/plugins";
+import { lastLoginMethod } from "better-auth/plugins";
 import { Resend } from "resend";
-import { admin, member, owner } from "./auth/permissions";
 
 const resend = new Resend(process.env.RESEND_API_KEY as string);
 
@@ -58,47 +55,10 @@ export const auth = betterAuth({
     },
     requireEmailVerification: false,
   },
-  databaseHooks: {
-    session: {
-      create: {
-        before: async (session) => {
-          const organization = await getActiveOrganization(session.userId);
-          return {
-            data: {
-              ...session,
-              activeOrganizationId: organization?.id,
-            },
-          };
-        },
-      },
-    },
-  },
   database: prismaAdapter(prisma, {
     provider: "postgresql",
   }),
   plugins: [
-    organization({
-      async sendInvitationEmail(data) {
-        const inviteLink = `${process.env.NEXT_PUBLIC_APP_URL}/api/accept-invitation/${data.id}`;
-        resend.emails.send({
-          from: `${emailSenderName} <${emailSenderAddress}>`,
-          to: data.email,
-          subject: "You've been invited to join our organization",
-          react: OrganizationInvitationEmail({
-            email: data.email,
-            invitedByUsername: data.inviter.user.name,
-            invitedByEmail: data.inviter.user.email,
-            teamName: data.organization.name,
-            inviteLink,
-          }),
-        });
-      },
-      roles: {
-        owner,
-        admin,
-        member,
-      },
-    }),
     lastLoginMethod(),
     nextCookies(),
   ],
