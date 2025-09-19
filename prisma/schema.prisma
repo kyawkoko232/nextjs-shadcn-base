@@ -1,11 +1,5 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
-  output   = "../src/generated/prisma"
 }
 
 datasource db {
@@ -14,37 +8,38 @@ datasource db {
 }
 
 model User {
-  id            String       @id
+  id            String   @id
   name          String
-  email         String
-  emailVerified Boolean      @default(false)
+  email         String   @unique
+  emailVerified Boolean  @default(false)
   image         String?
-  createdAt     DateTime     @default(now())
-  updatedAt     DateTime     @default(now()) @updatedAt
-  // Existing relations
-  sessions      Session[]
-  accounts      Account[]
-  // NEW: Organization-related relations
-  members       Member[] // NEW: User can be member of multiple organizations
-  invitations   Invitation[] @relation("InviterUser") // NEW: User can invite others to organizations
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @default(now()) @updatedAt
 
-  @@unique([email])
+  sessions    Session[]
+  accounts    Account[]
+  members     Member[]
+  invitations Invitation[] @relation("InviterUser")
+  posts       Post[]       @relation("PostAuthor")
+  comments    Comment[]
+  postViews   PostView[]
+
   @@map("user")
 }
 
 model Session {
   id                   String   @id
   expiresAt            DateTime
-  token                String
+  token                String   @unique
   createdAt            DateTime @default(now())
   updatedAt            DateTime @updatedAt
   ipAddress            String?
   userAgent            String?
   userId               String
-  activeOrganizationId String? // NEW: Track which organization is currently active for this session
-  user                 User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  activeOrganizationId String?
 
-  @@unique([token])
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   @@map("session")
 }
 
@@ -53,7 +48,6 @@ model Account {
   accountId             String
   providerId            String
   userId                String
-  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   accessToken           String?
   refreshToken          String?
   idToken               String?
@@ -63,6 +57,8 @@ model Account {
   password              String?
   createdAt             DateTime  @default(now())
   updatedAt             DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("account")
 }
@@ -78,61 +74,194 @@ model Verification {
   @@map("verification")
 }
 
-// NEW: Organization model for multi-tenant support
-
 model Organization {
-  id        String   @id
+  id        String   @id @default(cuid())
   name      String
   slug      String?  @unique
   logo      String?
-  createdAt DateTime
-  metadata  String? // JSON metadata field for additional organization data
+  type      String? // "blog", "shop", "vendor", "live" etc.
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  metadata  Json?
 
-  // Relations
   members     Member[]
   invitations Invitation[]
+  posts       Post[]
+  categories  Category[]
 
   @@map("organization")
 }
 
-// NEW: Role enum for organization membership
-
-enum Role {
-  member
-  admin
-  owner
-}
-
-// NEW: Member model to link users to organizations with roles
-
 model Member {
-  id             String   @id
+  id             String   @id @default(cuid())
   organizationId String
   userId         String
-  role           Role     @default(member)
-  createdAt      DateTime
+  roleId         String
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @default(now()) @updatedAt
 
-  // Relations
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role         Role         @relation(fields: [roleId], references: [id], onDelete: Restrict)
 
+  @@unique([organizationId, userId])
   @@map("member")
 }
 
-// NEW: Invitation model for inviting users to organizations
-
 model Invitation {
-  id             String   @id
+  id             String   @id @default(cuid())
   organizationId String
   email          String
-  role           String? // Role as string to allow flexible role assignment
+  roleId         String
   status         String   @default("pending")
   expiresAt      DateTime
   inviterId      String
+  createdAt      DateTime @default(now())
 
-  // Relations
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   inviter      User         @relation("InviterUser", fields: [inviterId], references: [id], onDelete: Cascade)
+  role         Role         @relation(fields: [roleId], references: [id], onDelete: Restrict)
 
   @@map("invitation")
+}
+
+model Role {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String?
+  isSystem    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  members         Member[]
+  rolePermissions RolePermission[]
+  invitations     Invitation[]
+}
+
+model Permission {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  rolePermissions RolePermission[]
+}
+
+model RolePermission {
+  id           String @id @default(cuid())
+  roleId       String
+  permissionId String
+
+  role       Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@unique([roleId, permissionId])
+}
+
+model Category {
+  id             String   @id @default(cuid())
+  name           String
+  slug           String
+  description    String?
+  organizationId String
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  posts        Post[]
+
+  @@unique([slug, organizationId])
+  @@map("category")
+}
+
+model Post {
+  id             String     @id @default(cuid())
+  title          String
+  slug           String
+  content        String
+  excerpt        String?
+  featuredImage  String?
+  status         PostStatus @default(draft)
+  visibility     Visibility @default(public)
+  publishedAt    DateTime?
+  organizationId String
+  authorId       String
+  categoryId     String?
+  viewCount      Int        @default(0)
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @default(now()) @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  author       User         @relation("PostAuthor", fields: [authorId], references: [id], onDelete: Cascade)
+  category     Category?    @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  comments     Comment[]
+  views        PostView[]
+  tags         PostTag[]
+
+  @@unique([slug, organizationId])
+  @@map("post")
+}
+
+enum PostStatus {
+  draft
+  published
+  archived
+}
+
+enum Visibility {
+  public
+  private
+}
+
+model Comment {
+  id        String   @id @default(cuid())
+  content   String
+  postId    String
+  authorId  String
+  parentId  String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  post    Post      @relation(fields: [postId], references: [id], onDelete: Cascade)
+  author  User      @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  parent  Comment?  @relation("CommentReplies", fields: [parentId], references: [id])
+  replies Comment[] @relation("CommentReplies")
+
+  @@map("comment")
+}
+
+model Tag {
+  id    String    @id @default(cuid())
+  name  String    @unique
+  slug  String    @unique
+  posts PostTag[]
+
+  @@map("tag")
+}
+
+model PostTag {
+  id     String @id @default(cuid())
+  postId String
+  tagId  String
+
+  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+  tag  Tag  @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@unique([postId, tagId])
+  @@map("post_tag")
+}
+
+model PostView {
+  id        String   @id @default(cuid())
+  postId    String
+  userId    String? // Null for anonymous views
+  ipAddress String?
+  userAgent String?
+  createdAt DateTime @default(now())
+
+  post Post  @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@map("post_view")
 }

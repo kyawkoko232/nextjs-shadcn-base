@@ -7,7 +7,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Organization } from "@/db/schema";
+import { Organization } from "@prisma/client"
 import { authClient } from "@/lib/auth-client";
 import { toast } from "sonner";
 

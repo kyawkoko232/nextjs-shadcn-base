@@ -1,6 +1,6 @@
 "use server";
 import { prisma } from "@/db"; // Adjust path to your Prisma client
-import { Role } from "@/db/schema"; // Import Role from generated Prisma client
+import { Role } from "@prisma/client" // Import Role from generated Prisma client
 import { auth } from "@/lib/auth";
 import { isAdmin } from "./permissions";
 

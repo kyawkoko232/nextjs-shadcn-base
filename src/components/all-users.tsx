@@ -1,12 +1,15 @@
 "use client";
 
-import { User } from "@/db/schema";
+
 import { Button } from "./ui/button";
 import { useState } from "react";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { authClient } from "@/lib/auth-client";
+import { User } from "@prisma/client";
+
+
 
 interface AllUsersProps {
   users: User[];
