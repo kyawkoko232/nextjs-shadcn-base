@@ -41,6 +41,16 @@ export const auth = betterAuth({
   },
   emailAndPassword: {
     enabled: true,
+    password: {
+      hash: async (password: string) => {
+        const { hash } = await import("argon2");
+        return await hash(password);
+      },
+      verify: async (data: { password: string; hash: string }) => {
+        const { verify } = await import("argon2");
+        return await verify(data.hash, data.password);
+      },
+    },
     sendResetPassword: async ({ user, url }) => {
       resend.emails.send({
         from: `${emailSenderName} <${emailSenderAddress}>`,
