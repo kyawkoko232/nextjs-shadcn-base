@@ -1,6 +1,5 @@
 // This is your Prisma schema file,
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 // Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
 // Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
 
@@ -15,30 +14,35 @@ datasource db {
 }
 
 model User {
-  id            String    @id
+  id            String       @id
   name          String
   email         String
-  emailVerified Boolean   @default(false)
+  emailVerified Boolean      @default(false)
   image         String?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @default(now()) @updatedAt
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @default(now()) @updatedAt
+  // Existing relations
   sessions      Session[]
   accounts      Account[]
+  // NEW: Organization-related relations
+  members       Member[] // NEW: User can be member of multiple organizations
+  invitations   Invitation[] @relation("InviterUser") // NEW: User can invite others to organizations
 
   @@unique([email])
   @@map("user")
 }
 
 model Session {
-  id        String   @id
-  expiresAt DateTime
-  token     String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  ipAddress String?
-  userAgent String?
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id                   String   @id
+  expiresAt            DateTime
+  token                String
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+  ipAddress            String?
+  userAgent            String?
+  userId               String
+  activeOrganizationId String? // NEW: Track which organization is currently active for this session
+  user                 User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([token])
   @@map("session")
@@ -72,4 +76,63 @@ model Verification {
   updatedAt  DateTime @default(now()) @updatedAt
 
   @@map("verification")
+}
+
+// NEW: Organization model for multi-tenant support
+
+model Organization {
+  id        String   @id
+  name      String
+  slug      String?  @unique
+  logo      String?
+  createdAt DateTime
+  metadata  String? // JSON metadata field for additional organization data
+
+  // Relations
+  members     Member[]
+  invitations Invitation[]
+
+  @@map("organization")
+}
+
+// NEW: Role enum for organization membership
+
+enum Role {
+  member
+  admin
+  owner
+}
+
+// NEW: Member model to link users to organizations with roles
+
+model Member {
+  id             String   @id
+  organizationId String
+  userId         String
+  role           Role     @default(member)
+  createdAt      DateTime
+
+  // Relations
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("member")
+}
+
+// NEW: Invitation model for inviting users to organizations
+
+model Invitation {
+  id             String   @id
+  organizationId String
+  email          String
+  role           String? // Role as string to allow flexible role assignment
+  status         String   @default("pending")
+  expiresAt      DateTime
+  inviterId      String
+
+  // Relations
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  inviter      User         @relation("InviterUser", fields: [inviterId], references: [id], onDelete: Cascade)
+
+  @@map("invitation")
 }
