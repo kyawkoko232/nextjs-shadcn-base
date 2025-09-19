@@ -33,9 +33,13 @@ import { authClient } from "@/lib/auth-client";
 import Link from "next/link";
 
 const formSchema = z.object({
-  username: z.string().min(3),
-  email: z.string().email(),
-  password: z.string().min(8),
+  username: z.string().min(3, "Username must be at least 3 characters"),
+  email: z.email("Please enter a valid email address"),
+  password: z.string().min(8, "Password must be at least 8 characters"),
+  confirmPassword: z.string().min(8, "Please confirm your password"),
+}).refine((data) => data.password === data.confirmPassword, {
+  message: "Passwords don't match",
+  path: ["confirmPassword"],
 });
 
 export function SignupForm({
@@ -43,6 +47,7 @@ export function SignupForm({
   ...props
 }: React.ComponentProps<"div">) {
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const router = useRouter();
   const form = useForm<z.infer<typeof formSchema>>({
@@ -51,6 +56,7 @@ export function SignupForm({
       username: "",
       email: "",
       password: "",
+      confirmPassword: "",
     },
   });
 
@@ -63,20 +69,28 @@ export function SignupForm({
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true);
+    setError(null);
 
-    const { success, message } = await signUp(
-      values.email,
-      values.password,
-      values.username
-    );
-
-    if (success) {
-      toast.success(
-        `${message as string} Please check your email for verification.`
+    try {
+      const { success, message } = await signUp(
+        values.email,
+        values.password,
+        values.username
       );
-      router.push("/dashboard");
-    } else {
-      toast.error(message as string);
+
+      if (success) {
+        toast.success(
+          `${message as string} Please check your email for verification.`
+        );
+        router.push("/dashboard");
+      } else {
+        setError(message as string);
+        toast.error(message as string);
+      }
+    } catch (err) {
+      const errorMessage = "An unexpected error occurred. Please try again.";
+      setError(errorMessage);
+      toast.error(errorMessage);
     }
 
     setIsLoading(false);
@@ -86,12 +100,17 @@ export function SignupForm({
     <div className={cn("flex flex-col gap-6", className)} {...props}>
       <Card>
         <CardHeader className="text-center">
-          <CardTitle className="text-xl">Welcome back</CardTitle>
-          <CardDescription>Signup with your Google account</CardDescription>
+          <CardTitle className="text-xl">Create your account</CardTitle>
+          <CardDescription>Signup with your Google account or email</CardDescription>
         </CardHeader>
         <CardContent>
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+              {error && (
+                <div className="bg-destructive/15 text-destructive text-sm p-3 rounded-md border border-destructive/20">
+                  {error}
+                </div>
+              )}
               <div className="grid gap-6">
                 <div className="flex flex-col gap-4">
                   <Button
@@ -145,31 +164,41 @@ export function SignupForm({
                     />
                   </div>
                   <div className="grid gap-3">
-                    <div className="flex flex-col gap-2">
-                      <FormField
-                        control={form.control}
-                        name="password"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Password</FormLabel>
-                            <FormControl>
-                              <Input
-                                placeholder="********"
-                                {...field}
-                                type="password"
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <Link
-                        href="/forgot-password"
-                        className="ml-auto text-sm underline-offset-4 hover:underline"
-                      >
-                        Forgot your password?
-                      </Link>
-                    </div>
+                    <FormField
+                      control={form.control}
+                      name="password"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Password</FormLabel>
+                          <FormControl>
+                            <Input
+                              placeholder="********"
+                              {...field}
+                              type="password"
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <FormField
+                      control={form.control}
+                      name="confirmPassword"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Confirm Password</FormLabel>
+                          <FormControl>
+                            <Input
+                              placeholder="********"
+                              {...field}
+                              type="password"
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
                   </div>
                   <Button type="submit" className="w-full" disabled={isLoading}>
                     {isLoading ? (

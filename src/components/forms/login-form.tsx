@@ -34,8 +34,8 @@ import Link from "next/link";
 import { Badge } from "../ui/badge";
 
 const formSchema = z.object({
-  email: z.string().email(),
-  password: z.string().min(8),
+  email: z.string().email("Please enter a valid email address"),
+  password: z.string().min(8, "Password must be at least 8 characters"),
 });
 
 export function LoginForm({
@@ -45,6 +45,7 @@ export function LoginForm({
   const lastMethod = authClient.getLastUsedLoginMethod();
 
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const router = useRouter();
   const form = useForm<z.infer<typeof formSchema>>({
@@ -64,14 +65,22 @@ export function LoginForm({
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true);
+    setError(null);
 
-    const { success, message } = await signIn(values.email, values.password);
+    try {
+      const { success, message } = await signIn(values.email, values.password);
 
-    if (success) {
-      toast.success(message as string);
-      router.push("/dashboard");
-    } else {
-      toast.error(message as string);
+      if (success) {
+        toast.success(message as string);
+        router.push("/dashboard");
+      } else {
+        setError(message as string);
+        toast.error(message as string);
+      }
+    } catch (err) {
+      const errorMessage = "An unexpected error occurred. Please try again.";
+      setError(errorMessage);
+      toast.error(errorMessage);
     }
 
     setIsLoading(false);
@@ -82,11 +91,16 @@ export function LoginForm({
       <Card>
         <CardHeader className="text-center">
           <CardTitle className="text-xl">Welcome back</CardTitle>
-          <CardDescription>Login with your Google account</CardDescription>
+          <CardDescription>Login with your Google account or email</CardDescription>
         </CardHeader>
         <CardContent>
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+              {error && (
+                <div className="bg-destructive/15 text-destructive text-sm p-3 rounded-md border border-destructive/20">
+                  {error}
+                </div>
+              )}
               <div className="grid gap-6">
                 <div className="flex flex-col gap-4">
                   <Button
