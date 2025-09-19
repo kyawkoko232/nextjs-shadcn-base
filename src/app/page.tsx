@@ -2,6 +2,9 @@ import { ModeSwitcher } from "@/components/mode-switcher";
 import { Button } from "@/components/ui/button";
 import Image from "next/image";
 import Link from "next/link";
+import { pageMetadata } from "@/lib/metadata";
+
+export const metadata = pageMetadata.home();
 
 export default function Home() {
   return (

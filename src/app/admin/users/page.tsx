@@ -5,6 +5,9 @@ import { redirect } from "next/navigation";
 import { UserTable } from "@/components/admin/user-table";
 import { UserStats } from "@/components/admin/user-stats";
 import { CreateUserDialog } from "@/components/admin/create-user-dialog";
+import { pageMetadata } from "@/lib/metadata";
+
+export const metadata = pageMetadata.adminUsers();
 
 export default async function UsersPage() {
   const { currentUser } = await getCurrentUser();

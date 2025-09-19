@@ -2,6 +2,9 @@ import { getCurrentUser } from "@/server/users";
 import { UserProfile } from "@/components/user-profile";
 import { UserStats } from "@/components/user-stats";
 import { ProfileEditForm } from "@/components/forms/profile-edit-form";
+import { pageMetadata } from "@/lib/metadata";
+
+export const metadata = pageMetadata.profile();
 
 export default async function ProfilePage() {
   const { currentUser } = await getCurrentUser();

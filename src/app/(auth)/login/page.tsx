@@ -2,6 +2,9 @@ import Link from "next/link";
 
 import { LoginForm } from "@/components/forms/login-form";
 import Image from "next/image";
+import { pageMetadata } from "@/lib/metadata";
+
+export const metadata = pageMetadata.login();
 
 export default function LoginPage() {
   return (

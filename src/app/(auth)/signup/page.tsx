@@ -2,6 +2,9 @@ import Link from "next/link";
 
 import { SignupForm } from "@/components/forms/signup-form";
 import Image from "next/image";
+import { pageMetadata } from "@/lib/metadata";
+
+export const metadata = pageMetadata.signup();
 
 export default function SignupPage() {
   return (

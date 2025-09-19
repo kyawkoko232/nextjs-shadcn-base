@@ -1,6 +1,9 @@
 import { getCurrentUser } from "@/server/users";
 import { UserStats } from "@/components/user-stats";
 import { UserProfile } from "@/components/user-profile";
+import { pageMetadata } from "@/lib/metadata";
+
+export const metadata = pageMetadata.dashboard();
 
 export default async function Dashboard() {
   const { currentUser } = await getCurrentUser();
